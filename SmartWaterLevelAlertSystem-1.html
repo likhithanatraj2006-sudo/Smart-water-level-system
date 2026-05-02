@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Water Level Alert System</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-deep: #0a1628;
+    --blue-mid: #0d2347;
+    --blue-accent: #1565c0;
+    --blue-bright: #1e88e5;
+    --blue-glow: #42a5f5;
+    --cyan: #00e5ff;
+    --cyan-soft: #4dd0e1;
+    --white: #e8f4fd;
+    --white-dim: rgba(232,244,253,0.7);
+    --warning: #ff6f00;
+    --warning-bright: #ffab40;
+    --danger: #f44336;
+    --success: #00e676;
+    --panel-bg: rgba(13,35,71,0.85);
+    --panel-border: rgba(66,165,245,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--blue-deep);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(21,101,192,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,229,255,0.08) 0%, transparent 50%),
+      linear-gradient(180deg, #0a1628 0%, #081220 100%);
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(66,165,245,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(66,165,245,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 24px 0 20px;
+    border-bottom: 1px solid var(--panel-border);
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  }
+  .header-badge {
+    display: inline-block;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    padding: 4px 16px;
+    border-radius: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(18px, 3vw, 32px);
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: 2px;
+    line-height: 1.2;
+    text-shadow: 0 0 30px rgba(66,165,245,0.5);
+  }
+  .header h1 span { color: var(--cyan); }
+  .header p {
+    color: var(--white-dim);
+    font-size: 14px;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* STEP INDICATOR */
+  .step-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .step-dot {
+    display: flex;
+    align-items: center;
+    cursor: default;
+  }
+  .step-dot .dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(66,165,245,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(232,244,253,0.4);
+    background: var(--blue-mid);
+    transition: all 0.4s ease;
+    position: relative;
+  }
+  .step-dot.active .dot {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,229,255,0.1);
+    box-shadow: 0 0 16px rgba(0,229,255,0.4);
+  }
+  .step-dot.done .dot {
+    border-color: var(--success);
+    color: var(--success);
+    background: rgba(0,230,118,0.1);
+  }
+  .step-dot .step-label {
+    font-size: 11px;
+    color: rgba(232,244,253,0.4);
+    margin-left: 8px;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    transition: color 0.4s;
+  }
+  .step-dot.active .step-label { color: var(--cyan); }
+  .step-dot.done .step-label { color: var(--success); }
+  .step-connector {
+    width: 40px; height: 2px;
+    background: rgba(66,165,245,0.2);
+    margin: 0 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .step-connector.active {
+    background: rgba(0,229,255,0.3);
+  }
+  .step-connector.active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: connFlow 1s ease-in-out infinite;
+  }
+  @keyframes connFlow {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* MAIN SCENE */
+  .scene-container {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+    min-height: 480px;
+  }
+  .scene-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue-bright), var(--cyan), var(--blue-bright), transparent);
+  }
+
+  .scene-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .scene-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--cyan);
+    animation: pulse 1.5s ease infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(0.8); }
+  }
+
+  /* STEP PANELS */
+  .step-panel {
+    display: none;
+    animation: fadeIn 0.5s ease;
+  }
+  .step-panel.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity:0; transform: translateY(10px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+
+  /* =================== STEP 0: SYSTEM SETUP =================== */
+  .system-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media(max-width:700px) { .system-layout { grid-template-columns: 1fr; } }
+
+  /* TANK SVG SCENE */
+  .tank-scene { position: relative; }
+  .tank-svg-wrap { width: 100%; }
+
+  /* COMPONENTS PANEL */
+  .components-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .comp-card {
+    background: rgba(21,101,192,0.15);
+    border: 1px solid rgba(66,165,245,0.25);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.3s;
+  }
+  .comp-card:hover {
+    border-color: var(--cyan);
+    background: rgba(0,229,255,0.08);
+    transform: translateX(4px);
+  }
+  .comp-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    background: rgba(21,101,192,0.3);
+    border: 1px solid rgba(66,165,245,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .comp-info h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+  .comp-info p {
+    font-size: 12px;
+    color: var(--white-dim);
+    line-height: 1.4;
+  }
+
+  /* =================== STEP 1: SENSOR WORKING =================== */
+  .sensor-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .sensor-diagram {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  /* =================== STEP 2: DATA PROCESSING =================== */
+  .processing-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .data-flow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .data-node {
+    background: rgba(13,35,71,0.8);
+    border: 2px solid rgba(66,165,245,0.4);
+    border-radius: 10px;
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 130px;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .data-node.highlight {
+    border-color: var(--cyan);
+    background: rgba(0,229,255,0.08);
+    box-shadow: 0 0 20px rgba(0,229,255,0.2);
+  }
+  .data-node .node-icon { font-size: 28px; margin-bottom: 8px; }
+  .data-node .node-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .data-node .node-val {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .flow-arrow {
+    font-size: 24px;
+    color: var(--cyan);
+    animation: arrowBlink 0.8s ease infinite;
+  }
+  @keyframes arrowBlink {
+    0%,100% { opacity:1; transform: translateX(0); }
+    50% { opacity:0.4; transform: translateX(4px); }
+  }
+
+  /* LEVEL BAR */
+  .level-gauge {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(13,35,71,0.8);
+    border: 1px solid rgba(66,165,245,0.3);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .gauge-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .gauge-bar-wrap {
+    height: 24px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(66,165,245,0.2);
+    margin-bottom: 8px;
+  }
+  .gauge-bar {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 1.5s ease, background 0.5s;
+    position: relative;
+    overflow: hidden;
+  }
+  .gauge-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s ease infinite;
+  }
+  @keyframes shimmer { to { left: 200%; } }
+  .gauge-bar.low { background: linear-gradient(90deg, #f44336, #ff6f00); }
+  .gauge-bar.mid { background: linear-gradient(90deg, #ff6f00, #fdd835); }
+  .gauge-bar.high { background: linear-gradient(90deg, #1e88e5, #00e5ff); }
+  .gauge-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+    margin-top: 8px;
+  }
+  .gauge-val.low { color: var(--danger); text-shadow: 0 0 16px rgba(244,67,54,0.6); }
+  .gauge-val.mid { color: var(--warning-bright); }
+  .gauge-val.high { color: var(--cyan); }
+
+  /* =================== STEP 3: THRESHOLD =================== */
+  .threshold-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .condition-box {
+    background: rgba(244,67,54,0.08);
+    border: 2px solid rgba(244,67,54,0.5);
+    border-radius: 12px;
+    padding: 24px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    animation: conditionPulse 2s ease infinite;
+  }
+  @keyframes conditionPulse {
+    0%,100% { box-shadow: 0 0 20px rgba(244,67,54,0.2); }
+    50% { box-shadow: 0 0 40px rgba(244,67,54,0.5); }
+  }
+  .condition-box .cond-keyword {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: #ff8f00;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .condition-box .cond-expr {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(18px,3vw,28px);
+    font-weight: 800;
+    color: var(--danger);
+    text-shadow: 0 0 20px rgba(244,67,54,0.7);
+  }
+  .condition-box .cond-result {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--warning-bright);
+    letter-spacing: 1px;
+  }
+  .threshold-desc {
+    max-width: 420px;
+    text-align: center;
+    color: var(--white-dim);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* =================== STEP 4: TRIGGER =================== */
+  .trigger-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .signal-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .sig-node {
+    background: rgba(13,35,71,0.9);
+    border: 2px solid rgba(66,165,245,0.35);
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+    min-width: 110px;
+  }
+  .sig-node.sending {
+    border-color: var(--warning);
+    animation: sendPulse 0.6s ease infinite;
+  }
+  @keyframes sendPulse {
+    0%,100% { box-shadow: 0 0 10px rgba(255,111,0,0.3); }
+    50% { box-shadow: 0 0 30px rgba(255,111,0,0.7); }
+  }
+  .sig-node .s-icon { font-size: 28px; margin-bottom: 6px; }
+  .sig-node .s-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    color: var(--cyan);
+    letter-spacing: 1px;
+  }
+  .sig-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .sig-arrow-line {
+    width: 50px; height: 2px;
+    background: linear-gradient(90deg, var(--warning), var(--warning-bright));
+    position: relative;
+    overflow: hidden;
+  }
+  .sig-arrow-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    animation: signalFlow 0.5s linear infinite;
+  }
+  @keyframes signalFlow { 0% { transform:translateX(-100%); } 100% { transform:translateX(200%); } }
+  .sig-arrow-label {
+    font-size: 10px;
+    color: var(--warning-bright);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* =================== STEP 5: SMS OUTPUT =================== */
+  .sms-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .sms-status-bar {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-align: center;
+    min-height: 24px;
+  }
+  .phone-frame {
+    width: 220px;
+    background: #111;
+    border-radius: 36px;
+    border: 3px solid #333;
+    padding: 14px 10px;
+    box-shadow: 0 0 40px rgba(0,229,255,0.15), inset 0 0 10px rgba(0,0,0,0.5);
+    position: relative;
+    transform: scale(0);
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .phone-frame.show { transform: scale(1); }
+  .phone-notch {
+    width: 60px; height: 10px;
+    background: #222;
+    border-radius: 0 0 10px 10px;
+    margin: 0 auto 10px;
+  }
+  .phone-screen {
+    background: #0d1117;
+    border-radius: 20px;
+    overflow: hidden;
+    min-height: 280px;
+  }
+  .phone-status-bar {
+    background: #161b22;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #8b949e;
+  }
+  .sms-thread {
+    padding: 12px;
+  }
+  .sms-header {
+    text-align: center;
+    padding: 8px 0 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 12px;
+  }
+  .sms-header p { font-size: 11px; color: #58a6ff; letter-spacing: 0.5px; }
+  .sms-bubble {
+    background: rgba(21,101,192,0.25);
+    border: 1px solid rgba(33,150,243,0.4);
+    border-radius: 14px 14px 4px 14px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--white);
+    line-height: 1.6;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.5s ease;
+    margin-bottom: 8px;
+  }
+  .sms-bubble.show { opacity: 1; transform: translateY(0); }
+  .sms-bubble .alert-icon { font-size: 18px; }
+  .sms-bubble .alert-title {
+    font-weight: 600;
+    color: #ff8f00;
+    margin: 4px 0 2px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .sms-bubble .alert-msg { font-size: 13px; }
+  .sms-time { font-size: 10px; color: #555; text-align: right; margin-top: 4px; }
+  .delivered-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,230,118,0.1);
+    border: 1px solid var(--success);
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    color: var(--success);
+    letter-spacing: 2px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.5s ease;
+    box-shadow: 0 0 20px rgba(0,230,118,0.2);
+  }
+  .delivered-badge.show { opacity: 1; transform: scale(1); }
+
+  /* =================== INFO PANEL =================== */
+  .info-panel {
+    background: rgba(21,101,192,0.1);
+    border-left: 3px solid var(--blue-bright);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--white-dim);
+    line-height: 1.7;
+    margin-top: 16px;
+  }
+  .info-panel strong { color: var(--cyan); font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 1px; }
+
+  /* =================== BUTTONS =================== */
+  .controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.3s;
+  }
+  .btn:hover::before { transform: translateX(100%); }
+  .btn-start {
+    background: linear-gradient(135deg, var(--blue-accent), var(--blue-bright));
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(30,136,229,0.4);
+  }
+  .btn-start:hover { box-shadow: 0 6px 25px rgba(30,136,229,0.6); transform: translateY(-2px); }
+  .btn-next {
+    background: linear-gradient(135deg, #00796b, #00bcd4);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,188,212,0.3);
+  }
+  .btn-next:hover { box-shadow: 0 6px 25px rgba(0,188,212,0.5); transform: translateY(-2px); }
+  .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-reset {
+    background: rgba(13,35,71,0.8);
+    color: var(--white-dim);
+    border: 1px solid rgba(66,165,245,0.3);
+  }
+  .btn-reset:hover { border-color: var(--cyan); color: var(--cyan); transform: translateY(-2px); }
+
+  /* =================== TANK SVG =================== */
+  .tank-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    fill: rgba(232,244,253,0.7);
+  }
+  .tank-label-accent { fill: #00e5ff; }
+  .tank-heading {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    fill: #00e5ff;
+    letter-spacing: 2px;
+  }
+
+  /* Wave animation */
+  @keyframes wave {
+    0% { d: path("M0,0 Q20,-6 40,0 Q60,6 80,0 Q100,-6 120,0 Q140,6 160,0 L160,20 L0,20 Z"); }
+    50% { d: path("M0,0 Q20,6 40,0 Q60,-6 80,0 Q100,6 120,0 Q140,-6 160,0 L160,20 L0,20 Z"); }
+    100% { d: path("M0,0 Q20,-6 40,0 Q60,6 80,0 Q100,-6 120,0 Q140,6 160,0 L160,20 L0,20 Z"); }
+  }
+  .water-wave { animation: wave 2s ease-in-out infinite; }
+
+  /* Ultrasonic wave animation */
+  @keyframes sonarOut {
+    0% { stroke-width: 3; opacity: 1; r: 0; }
+    100% { stroke-width: 0.5; opacity: 0; r: 60; }
+  }
+  .sonar-ring { animation: sonarOut 1.5s ease-out infinite; }
+  .sonar-ring:nth-child(2) { animation-delay: 0.3s; }
+  .sonar-ring:nth-child(3) { animation-delay: 0.6s; }
+
+  /* Pulse dot */
+  @keyframes pulseDot {
+    0%,100% { r: 4; opacity: 1; }
+    50% { r: 7; opacity: 0.6; }
+  }
+
+  /* Signal line animation */
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -20; }
+  }
+  .signal-line { stroke-dasharray: 8 4; animation: dashFlow 0.5s linear infinite; }
+
+  /* Code blink */
+  @keyframes codeBlink {
+    0%,90% { opacity:1; }
+    95%,100% { opacity:0; }
+  }
+  .cursor-blink { animation: codeBlink 1s step-end infinite; }
+
+  /* Step description */
+  .step-description {
+    text-align: center;
+    color: var(--white-dim);
+    font-size: 14px;
+    margin-bottom: 18px;
+    line-height: 1.6;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 16px;
+    color: rgba(232,244,253,0.3);
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-top: 1px solid var(--panel-border);
+    margin-top: 16px;
+  }
+
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(66,165,245,0.2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 420px;
+    width: 100%;
+    color: #8ec5fc;
+  }
+  .code-keyword { color: #ff79c6; }
+  .code-number { color: #bd93f9; }
+  .code-comment { color: #6272a4; }
+  .code-string { color: #f1fa8c; }
+  .code-func { color: #50fa7b; }
+
+  /* LOADING dots */
+  .dots::after {
+    content: '';
+    animation: dotsAnim 1.5s steps(4) infinite;
+  }
+  @keyframes dotsAnim {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge">IoT Project · Visual Simulation</div>
+    <h1>Smart <span>Water Level</span> Alert System</h1>
+    <p>Dams / Tanks · Ultrasonic Sensor + Arduino + GSM Module</p>
+  </div>
+
+  <!-- STEP INDICATOR -->
+  <div class="step-indicator" id="stepIndicator">
+    <div class="step-dot" id="sdot-0">
+      <div class="dot">0</div>
+      <span class="step-label">Setup</span>
+    </div>
+    <div class="step-connector" id="sconn-0"></div>
+    <div class="step-dot" id="sdot-1">
+      <div class="dot">1</div>
+      <span class="step-label">Sensor</span>
+    </div>
+    <div class="step-connector" id="sconn-1"></div>
+    <div class="step-dot" id="sdot-2">
+      <div class="dot">2</div>
+      <span class="step-label">Processing</span>
+    </div>
+    <div class="step-connector" id="sconn-2"></div>
+    <div class="step-dot" id="sdot-3">
+      <div class="dot">3</div>
+      <span class="step-label">Threshold</span>
+    </div>
+    <div class="step-connector" id="sconn-3"></div>
+    <div class="step-dot" id="sdot-4">
+      <div class="dot">4</div>
+      <span class="step-label">Trigger</span>
+    </div>
+    <div class="step-connector" id="sconn-4"></div>
+    <div class="step-dot" id="sdot-5">
+      <div class="dot">5</div>
+      <span class="step-label">SMS Alert</span>
+    </div>
+  </div>
+
+  <!-- MAIN SCENE -->
+  <div class="scene-container">
+    <div class="scene-title" id="sceneTitle">System Overview</div>
+
+    <!-- ========== STEP 0: SETUP ========== -->
+    <div class="step-panel active" id="panel-0">
+      <p class="step-description">Cross-section view of the Smart Water Level Alert System showing all components and their wired connections.</p>
+      <div class="system-layout">
+        <!-- Tank SVG -->
+        <div class="tank-scene">
+          <svg viewBox="0 0 300 380" width="100%" style="max-width:300px;display:block;margin:0 auto;">
+            <defs>
+              <linearGradient id="tankWall" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#1565c0;stop-opacity:0.6"/>
+                <stop offset="50%" style="stop-color:#1e88e5;stop-opacity:0.3"/>
+                <stop offset="100%" style="stop-color:#1565c0;stop-opacity:0.6"/>
+              </linearGradient>
+              <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#42a5f5;stop-opacity:0.9"/>
+                <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:0.95"/>
+              </linearGradient>
+              <linearGradient id="sensorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#cfd8dc"/>
+                <stop offset="100%" style="stop-color:#90a4ae"/>
+              </linearGradient>
+              <linearGradient id="arduinoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00897b"/>
+                <stop offset="100%" style="stop-color:#004d40"/>
+              </linearGradient>
+              <linearGradient id="gsmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#7b1fa2"/>
+                <stop offset="100%" style="stop-color:#4a148c"/>
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <clipPath id="tankClip">
+                <rect x="60" y="60" width="160" height="230"/>
+              </clipPath>
+            </defs>
+
+            <!-- Tank structure -->
+            <rect x="58" y="58" width="164" height="234" rx="4" fill="url(#tankWall)" stroke="rgba(66,165,245,0.6)" stroke-width="2"/>
+            <!-- Tank walls (cross-section) -->
+            <rect x="58" y="58" width="12" height="234" fill="rgba(21,101,192,0.7)"/>
+            <rect x="210" y="58" width="12" height="234" fill="rgba(21,101,192,0.7)"/>
+            <rect x="58" y="280" width="164" height="12" fill="rgba(21,101,192,0.7)"/>
+
+            <!-- Water fill (low level ~15%) -->
+            <rect x="70" y="248" width="140" height="32" fill="url(#waterGrad)" clip-path="url(#tankClip)"/>
+            <!-- Wave on top of water -->
+            <svg x="70" y="242" width="140" height="12">
+              <path class="water-wave" d="M0,0 Q20,-6 40,0 Q60,6 80,0 Q100,-6 120,0 Q140,6 160,0 L160,12 L0,12 Z" fill="rgba(66,165,245,0.8)"/>
+            </svg>
+
+            <!-- Water level line + percentage -->
+            <line x1="70" y1="248" x2="210" y2="248" stroke="rgba(255,111,0,0.6)" stroke-width="1.5" stroke-dasharray="6,3"/>
+            <text x="218" y="252" class="tank-label" fill="#ff8f00" font-size="10">15%</text>
+
+            <!-- Level markers on tank wall -->
+            <text x="40" y="100" class="tank-label" fill="rgba(232,244,253,0.4)" font-size="9" text-anchor="middle">100%</text>
+            <line x1="56" y1="98" x2="62" y2="98" stroke="rgba(66,165,245,0.4)" stroke-width="1"/>
+            <text x="40" y="165" class="tank-label" fill="rgba(232,244,253,0.4)" font-size="9" text-anchor="middle">50%</text>
+            <line x1="56" y1="163" x2="62" y2="163" stroke="rgba(66,165,245,0.4)" stroke-width="1"/>
+            <text x="40" y="232" class="tank-label" fill="#ff8f00" font-size="9" text-anchor="middle">20%</text>
+            <line x1="56" y1="230" x2="62" y2="230" stroke="rgba(255,111,0,0.5)" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+            <!-- Ultrasonic sensor on top -->
+            <rect x="118" y="34" width="44" height="22" rx="4" fill="url(#sensorGrad)" stroke="#90a4ae" stroke-width="1.5"/>
+            <rect x="124" y="38" width="10" height="14" rx="2" fill="#455a64"/>
+            <rect x="146" y="38" width="10" height="14" rx="2" fill="#455a64"/>
+            <!-- sensor circles (eyes) -->
+            <circle cx="129" cy="45" r="4" fill="#263238"/>
+            <circle cx="151" cy="45" r="4" fill="#263238"/>
+            <text x="140" y="30" class="tank-heading" font-size="8" text-anchor="middle" fill="#4dd0e1">HC-SR04</text>
+
+            <!-- Ultrasonic waves going down (static for setup view) -->
+            <line x1="140" y1="56" x2="140" y2="242" stroke="rgba(0,229,255,0.25)" stroke-width="1" stroke-dasharray="4,4"/>
+            <polygon points="136,242 140,250 144,242" fill="rgba(0,229,255,0.4)"/>
+
+            <!-- Wire from sensor down to right side to Arduino -->
+            <path d="M162,44 C200,44 210,44 210,60" stroke="#4dd0e1" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+            <path d="M210,120 L240,120 L240,315 L216,315" stroke="#4dd0e1" stroke-width="1.5" fill="none"/>
+
+            <!-- Arduino board -->
+            <rect x="216" y="300" width="70" height="44" rx="4" fill="url(#arduinoGrad)" stroke="#80cbc4" stroke-width="1.5"/>
+            <rect x="222" y="306" width="18" height="12" rx="2" fill="#004d40"/>
+            <rect x="246" y="306" width="10" height="8" rx="1" fill="#1de9b6" opacity="0.8"/>
+            <circle cx="264" cy="310" r="3" fill="#ffd740" opacity="0.9"/>
+            <!-- Pin holes -->
+            <rect x="220" y="324" width="4" height="14" rx="1" fill="rgba(0,0,0,0.5)"/>
+            <rect x="226" y="324" width="4" height="14" rx="1" fill="rgba(0,0,0,0.5)"/>
+            <rect x="232" y="324" width="4" height="14" rx="1" fill="rgba(0,0,0,0.5)"/>
+            <text x="251" y="342" class="tank-label" font-size="7" fill="#80cbc4" text-anchor="middle">ARDUINO</text>
+            <text x="251" y="349" class="tank-label" font-size="6" fill="#4db6ac" text-anchor="middle">UNO</text>
+
+            <!-- Wire Arduino to GSM -->
+            <path d="M251,344 L251,365" stroke="#ce93d8" stroke-width="1.5" fill="none"/>
+
+            <!-- GSM Module -->
+            <rect x="216" y="362" width="70" height="14" rx="3" fill="url(#gsmGrad)" stroke="#ce93d8" stroke-width="1.5"/>
+            <rect x="222" y="365" width="20" height="8" rx="1" fill="#4a148c"/>
+            <rect x="248" y="365" width="8" height="8" rx="1" fill="#9c27b0" opacity="0.7"/>
+            <text x="271" y="371" class="tank-label" font-size="7" fill="#ce93d8">SIM800L</text>
+            <!-- Antenna -->
+            <line x1="280" y1="362" x2="280" y2="352" stroke="#ce93d8" stroke-width="2"/>
+            <circle cx="280" cy="351" r="2" fill="#e040fb"/>
+
+            <!-- Labels -->
+            <text x="140" y="22" class="tank-heading" text-anchor="middle">ULTRASONIC SENSOR</text>
+            <text x="265" y="298" class="tank-heading" font-size="7" text-anchor="middle">ARDUINO</text>
+            <text x="265" y="360" class="tank-heading" font-size="7" text-anchor="middle">GSM MODULE</text>
+            <text x="100" y="272" class="tank-label" fill="#f57c00" font-size="9" text-anchor="middle">⚠ LOW WATER</text>
+
+            <!-- Tank label -->
+            <text x="140" y="300" class="tank-label" fill="rgba(232,244,253,0.3)" font-size="10" text-anchor="middle">WATER TANK</text>
+          </svg>
+        </div>
+
+        <!-- Components List -->
+        <div class="components-panel">
+          <div class="comp-card">
+            <div class="comp-icon">📡</div>
+            <div class="comp-info">
+              <h3>Ultrasonic Sensor</h3>
+              <p>HC-SR04 mounted at top of tank. Emits 40kHz sound waves and measures echo time to calculate water distance.</p>
+            </div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-icon">🔌</div>
+            <div class="comp-info">
+              <h3>Arduino UNO</h3>
+              <p>Microcontroller that processes sensor data, calculates water level %, and triggers alert logic based on thresholds.</p>
+            </div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-icon">📶</div>
+            <div class="comp-info">
+              <h3>GSM Module (SIM800L)</h3>
+              <p>Cellular communication module connected to Arduino via UART. Sends SMS alerts when level is critical.</p>
+            </div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-icon">🔗</div>
+            <div class="comp-info">
+              <h3>Wired Connections</h3>
+              <p>Sensor → Digital pins 9,10 | Arduino → GSM via TX/RX pins | 5V/3.7V power supply lines.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== STEP 1: SENSOR WORKING ========== -->
+    <div class="step-panel" id="panel-1">
+      <p class="step-description">The HC-SR04 ultrasonic sensor emits sound pulses that bounce off the water surface and return — measuring the distance to calculate water level.</p>
+      <div class="sensor-scene">
+        <svg viewBox="0 0 400 300" width="100%" style="max-width:500px;display:block;margin:0 auto;">
+          <defs>
+            <linearGradient id="wg2" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#42a5f5;stop-opacity:0.85"/>
+              <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:0.95"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Tank outline -->
+          <rect x="80" y="40" width="240" height="230" rx="4" fill="rgba(13,35,71,0.7)" stroke="rgba(66,165,245,0.5)" stroke-width="2"/>
+          <rect x="80" y="40" width="14" height="230" fill="rgba(21,101,192,0.6)"/>
+          <rect x="306" y="40" width="14" height="230" fill="rgba(21,101,192,0.6)"/>
+          <rect x="80" y="256" width="240" height="14" fill="rgba(21,101,192,0.6)"/>
+
+          <!-- Water (low) -->
+          <rect x="94" y="222" width="212" height="34" fill="url(#wg2)"/>
+          <svg x="94" y="216" width="212" height="10">
+            <path class="water-wave" d="M0,0 Q26,-6 53,0 Q79,6 106,0 Q132,-6 159,0 Q185,6 212,0 L212,10 L0,10 Z" fill="rgba(66,165,245,0.85)"/>
+          </svg>
+
+          <!-- Sensor at top center -->
+          <rect x="170" y="10" width="60" height="28" rx="5" fill="#b0bec5" stroke="#78909c" stroke-width="1.5"/>
+          <circle cx="183" cy="24" r="6" fill="#37474f"/>
+          <circle cx="197" cy="24" r="6" fill="#37474f"/>
+          <circle cx="213" cy="24" r="6" fill="#37474f"/>
+          <text x="200" y="7" font-family="Orbitron,monospace" font-size="8" fill="#00e5ff" text-anchor="middle" letter-spacing="1">SENSOR</text>
+
+          <!-- Animated sonar pulses going down -->
+          <g transform="translate(200,38)">
+            <ellipse cx="0" cy="0" rx="0" ry="0" fill="none" stroke="rgba(0,229,255,0.8)" stroke-width="2" class="sonar-ring"/>
+            <ellipse cx="0" cy="0" rx="0" ry="0" fill="none" stroke="rgba(0,229,255,0.6)" stroke-width="1.5" class="sonar-ring"/>
+            <ellipse cx="0" cy="0" rx="0" ry="0" fill="none" stroke="rgba(0,229,255,0.4)" stroke-width="1" class="sonar-ring"/>
+          </g>
+
+          <!-- Beam line down -->
+          <line x1="200" y1="38" x2="200" y2="218" stroke="rgba(0,229,255,0.3)" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+          <!-- Distance markers -->
+          <line x1="320" y1="38" x2="330" y2="38" stroke="rgba(66,165,245,0.5)" stroke-width="1"/>
+          <line x1="320" y1="218" x2="330" y2="218" stroke="rgba(66,165,245,0.5)" stroke-width="1"/>
+          <line x1="325" y1="38" x2="325" y2="218" stroke="rgba(66,165,245,0.4)" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="342" y="130" font-family="Rajdhani,sans-serif" font-size="11" fill="rgba(232,244,253,0.6)" text-anchor="middle">Distance</text>
+          <text x="342" y="143" font-family="Orbitron,monospace" font-size="10" fill="#00e5ff" text-anchor="middle">d = 42cm</text>
+
+          <!-- Tank depth marker -->
+          <line x1="50" y1="40" x2="60" y2="40" stroke="rgba(66,165,245,0.4)" stroke-width="1"/>
+          <line x1="50" y1="270" x2="60" y2="270" stroke="rgba(66,165,245,0.4)" stroke-width="1"/>
+          <line x1="55" y1="40" x2="55" y2="270" stroke="rgba(66,165,245,0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="36" y="155" font-family="Rajdhani,sans-serif" font-size="10" fill="rgba(232,244,253,0.5)" text-anchor="middle">Tank</text>
+          <text x="36" y="167" font-family="Rajdhani,sans-serif" font-size="10" fill="rgba(232,244,253,0.5)" text-anchor="middle">50cm</text>
+
+          <!-- Formula -->
+          <rect x="80" y="285" width="240" height="18" rx="4" fill="rgba(0,0,0,0.4)"/>
+          <text x="200" y="297" font-family="Rajdhani,sans-serif" font-size="11" fill="#4dd0e1" text-anchor="middle">
+            Level% = ((TankH - Distance) / TankH) × 100 = 16%
+          </text>
+        </svg>
+
+        <div class="info-panel" style="max-width:500px">
+          <strong>HOW IT WORKS</strong><br>
+          The sensor sends a 10μs trigger pulse → emits 8 ultrasonic bursts at 40kHz → sound travels to water surface and reflects back → Arduino measures echo duration → Distance = (echo time × 0.034) / 2 → Level % calculated.
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== STEP 2: DATA PROCESSING ========== -->
+    <div class="step-panel" id="panel-2">
+      <p class="step-description">Arduino receives the echo signal, runs the distance formula, and computes the water level percentage in real time.</p>
+      <div class="processing-layout">
+        <div class="data-flow">
+          <div class="data-node highlight">
+            <div class="node-icon">📡</div>
+            <span class="node-label">Sensor Echo</span>
+            <div class="node-val">2470 μs</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="data-node highlight">
+            <div class="node-icon">🔌</div>
+            <span class="node-label">Distance</span>
+            <div class="node-val">42 cm</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="data-node highlight">
+            <div class="node-icon">💧</div>
+            <span class="node-label">Water Level</span>
+            <div class="node-val" id="levelPercent">16%</div>
+          </div>
+        </div>
+
+        <div class="level-gauge">
+          <div class="gauge-label">WATER LEVEL GAUGE</div>
+          <div class="gauge-bar-wrap">
+            <div class="gauge-bar low" id="gaugeBar" style="width:16%"></div>
+          </div>
+          <div class="gauge-val low" id="gaugeVal">16%</div>
+        </div>
+
+        <div class="code-block">
+          <span class="code-comment">// Arduino data processing code</span><br>
+          <span class="code-keyword">long</span> duration = pulseIn(echoPin, HIGH);<br>
+          <span class="code-keyword">float</span> distance = duration * <span class="code-number">0.034</span> / <span class="code-number">2</span>;<br>
+          <span class="code-keyword">int</span> level = ((<span class="code-number">50.0</span> - distance) / <span class="code-number">50.0</span>) * <span class="code-number">100</span>;<br>
+          <span class="code-func">Serial</span>.print(<span class="code-string">"Level: "</span>);<br>
+          <span class="code-func">Serial</span>.println(level);<span class="cursor-blink">█</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== STEP 3: THRESHOLD ========== -->
+    <div class="step-panel" id="panel-3">
+      <p class="step-description">Arduino continuously checks the water level against predefined thresholds and decides whether to trigger an alert.</p>
+      <div class="threshold-layout">
+        <div class="condition-box">
+          <div class="cond-keyword">⚡ THRESHOLD CONDITION</div>
+          <div class="cond-expr">Water Level &lt; 20%</div>
+          <div class="cond-result">→ ALERT TRIGGERED! Current Level: 16% ✗</div>
+        </div>
+
+        <div class="code-block" style="max-width:420px">
+          <span class="code-keyword">if</span> (level &lt; <span class="code-number">20</span>) {<br>
+          &nbsp;&nbsp;<span class="code-comment">// Critical: send alert</span><br>
+          &nbsp;&nbsp;<span class="code-func">sendSMSAlert</span>();<br>
+          } <span class="code-keyword">else if</span> (level &lt; <span class="code-number">40</span>) {<br>
+          &nbsp;&nbsp;<span class="code-comment">// Warning level</span><br>
+          &nbsp;&nbsp;<span class="code-func">activateBuzzer</span>();<br>
+          } <span class="code-keyword">else</span> {<br>
+          &nbsp;&nbsp;<span class="code-comment">// Normal operation</span><br>
+          &nbsp;&nbsp;ledStatus = <span class="code-number">GREEN</span>;<br>
+          }<span class="cursor-blink">█</span>
+        </div>
+
+        <div class="threshold-desc">
+          The system monitors three alert zones: <strong style="color:#f44336">Critical (&lt;20%)</strong>, <strong style="color:#ff8f00">Warning (20–40%)</strong>, and <strong style="color:#00e676">Normal (&gt;40%)</strong>. Current reading of <strong style="color:#f44336">16%</strong> triggers immediate SMS alert.
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== STEP 4: TRIGGER ========== -->
+    <div class="step-panel" id="panel-4">
+      <p class="step-description">Arduino sends a serial command to the GSM module, which then dials into the cellular network to dispatch the SMS alert.</p>
+      <div class="trigger-layout">
+        <div class="signal-flow">
+          <div class="sig-node">
+            <div class="s-icon">🔌</div>
+            <div class="s-label">ARDUINO</div>
+          </div>
+          <div class="sig-arrow">
+            <div class="sig-arrow-line"></div>
+            <div class="sig-arrow-label">UART TX/RX</div>
+          </div>
+          <div class="sig-node sending">
+            <div class="s-icon">📶</div>
+            <div class="s-label">GSM MODULE</div>
+          </div>
+          <div class="sig-arrow">
+            <div class="sig-arrow-line"></div>
+            <div class="sig-arrow-label">CELLULAR</div>
+          </div>
+          <div class="sig-node">
+            <div class="s-icon">🗼</div>
+            <div class="s-label">CELL TOWER</div>
+          </div>
+          <div class="sig-arrow">
+            <div class="sig-arrow-line"></div>
+            <div class="sig-arrow-label">NETWORK</div>
+          </div>
+          <div class="sig-node">
+            <div class="s-icon">📱</div>
+            <div class="s-label">MOBILE</div>
+          </div>
+        </div>
+
+        <div class="code-block" style="max-width:460px">
+          <span class="code-comment">// Sending SMS via GSM AT Commands</span><br>
+          <span class="code-keyword">void</span> <span class="code-func">sendSMSAlert</span>() {<br>
+          &nbsp;&nbsp;gsm.println(<span class="code-string">"AT+CMGF=1"</span>);&nbsp;&nbsp;<span class="code-comment">// Text mode</span><br>
+          &nbsp;&nbsp;delay(<span class="code-number">1000</span>);<br>
+          &nbsp;&nbsp;gsm.println(<span class="code-string">"AT+CMGS=\"+917339370608\""</span>);<br>
+          &nbsp;&nbsp;delay(<span class="code-number">1000</span>);<br>
+          &nbsp;&nbsp;gsm.print(<span class="code-string">"ALERT! Water level critically low."</span>);<br>
+          &nbsp;&nbsp;gsm.write(<span class="code-number">26</span>);&nbsp;&nbsp;<span class="code-comment">// Ctrl+Z to send</span><br>
+          }<span class="cursor-blink">█</span>
+        </div>
+
+        <div class="info-panel" style="max-width:500px">
+          <strong>AT COMMANDS SEQUENCE</strong><br>
+          Arduino sends AT+CMGF=1 (SMS text mode) → AT+CMGS (specify recipient number) → Message body → Ctrl+Z character (ASCII 26) to dispatch → GSM module acknowledges with "+CMGS: OK".
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== STEP 5: SMS OUTPUT ========== -->
+    <div class="step-panel" id="panel-5">
+      <p class="step-description">The GSM module successfully transmits the SMS alert to the registered mobile number. The user receives an immediate notification.</p>
+      <div class="sms-layout">
+        <div class="sms-status-bar" id="smsStatusBar">
+          <span class="dots">Sending SMS to +91 73393 70608</span>
+        </div>
+
+        <!-- Phone -->
+        <div class="phone-frame" id="phoneFrame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status-bar">
+              <span>9:41</span>
+              <span>📶 ▪▪▪ 🔋</span>
+            </div>
+            <div class="sms-thread">
+              <div class="sms-header">
+                <p>📲 +91 73393 70608</p>
+              </div>
+              <div class="sms-bubble" id="smsBubble">
+                <div class="alert-icon">⚠️</div>
+                <div class="alert-title">SMART WATER ALERT</div>
+                <div class="alert-msg">Water level is critically low.<br>Current Level: 16%<br>Immediate action required!</div>
+                <div class="sms-time">Now · IoT System</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="delivered-badge" id="deliveredBadge">
+          ✅ &nbsp;MESSAGE DELIVERED
+        </div>
+
+        <div class="info-panel" style="max-width:460px; text-align:center">
+          <strong>SYSTEM COMPLETE</strong> — The Smart Water Level Alert System has successfully detected a critical water level and sent an SMS notification. The user can now take immediate action to refill the tank.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /scene-container -->
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="btn btn-start" id="btnStart" onclick="startSystem()">▶ &nbsp;START</button>
+    <button class="btn btn-next" id="btnNext" onclick="nextStep()" disabled>⏭ &nbsp;NEXT STEP</button>
+    <button class="btn btn-reset" onclick="resetSystem()">🔄 &nbsp;RESET</button>
+  </div>
+
+  <div class="footer">
+    Smart Water Level Alert System · IoT Visual Simulation · For Educational Purposes Only
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+  let currentStep = 0;
+  let started = false;
+  const totalSteps = 5;
+
+  const sceneTitles = [
+    'PART 1 — System Setup & Components',
+    'PART 2 — Step 1: Ultrasonic Sensor Working',
+    'PART 2 — Step 2: Data Processing (Arduino)',
+    'PART 2 — Step 3: Threshold Condition Check',
+    'PART 2 — Step 4: GSM Trigger Action',
+    'PART 3 — Final Output: SMS Alert Sent'
+  ];
+
+  function updateStepIndicator() {
+    for (let i = 0; i <= totalSteps; i++) {
+      const dot = document.getElementById(`sdot-${i}`);
+      if (!dot) continue;
+      dot.classList.remove('active', 'done');
+      if (i === currentStep) dot.classList.add('active');
+      else if (i < currentStep) dot.classList.add('done');
+    }
+    for (let i = 0; i < totalSteps; i++) {
+      const conn = document.getElementById(`sconn-${i}`);
+      if (!conn) continue;
+      conn.classList.remove('active');
+      if (i < currentStep) conn.classList.add('active');
+    }
+  }
+
+  function showPanel(index) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById(`panel-${index}`);
+    if (panel) panel.classList.add('active');
+    document.getElementById('sceneTitle').textContent = sceneTitles[index];
+  }
+
+  function startSystem() {
+    started = true;
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnStart').style.opacity = '0.5';
+    document.getElementById('btnNext').disabled = false;
+    updateStepIndicator();
+    // animate gauges in step 2 when visited
+  }
+
+  function nextStep() {
+    if (!started || currentStep >= totalSteps) return;
+    currentStep++;
+    showPanel(currentStep);
+    updateStepIndicator();
+
+    if (currentStep === totalSteps) {
+      document.getElementById('btnNext').disabled = true;
+      document.getElementById('btnNext').textContent = '✅  COMPLETE';
+    }
+
+    // Step-specific animations
+    if (currentStep === 2) animateGauge();
+    if (currentStep === 5) animateSMS();
+  }
+
+  function resetSystem() {
+    currentStep = 0;
+    started = false;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStart').style.opacity = '1';
+    document.getElementById('btnNext').disabled = true;
+    document.getElementById('btnNext').innerHTML = '⏭ &nbsp;NEXT STEP';
+    showPanel(0);
+    updateStepIndicator();
+
+    // reset SMS elements
+    document.getElementById('phoneFrame').classList.remove('show');
+    document.getElementById('smsBubble').classList.remove('show');
+    document.getElementById('deliveredBadge').classList.remove('show');
+    document.getElementById('smsStatusBar').innerHTML = '<span class="dots">Sending SMS to +91 73393 70608</span>';
+    document.getElementById('gaugeBar').style.width = '16%';
+    document.getElementById('gaugeVal').textContent = '16%';
+    document.getElementById('levelPercent').textContent = '16%';
+  }
+
+  function animateGauge() {
+    const bar = document.getElementById('gaugeBar');
+    const val = document.getElementById('gaugeVal');
+    const pct = document.getElementById('levelPercent');
+    let w = 0;
+    const target = 16;
+    bar.style.width = '0%';
+    val.textContent = '0%';
+    pct.textContent = '0%';
+    const timer = setInterval(() => {
+      w++;
+      bar.style.width = w + '%';
+      val.textContent = w + '%';
+      pct.textContent = w + '%';
+      if (w >= target) clearInterval(timer);
+    }, 60);
+  }
+
+  function animateSMS() {
+    const statusBar = document.getElementById('smsStatusBar');
+    const phone = document.getElementById('phoneFrame');
+    const bubble = document.getElementById('smsBubble');
+    const badge = document.getElementById('deliveredBadge');
+
+    statusBar.innerHTML = '<span class="dots">Connecting to GSM network</span>';
+
+    setTimeout(() => {
+      statusBar.innerHTML = '<span class="dots">Sending SMS to +91 73393 70608</span>';
+      phone.classList.add('show');
+    }, 1200);
+
+    setTimeout(() => {
+      bubble.classList.add('show');
+    }, 2400);
+
+    setTimeout(() => {
+      statusBar.innerHTML = '📨 Transmission complete — SMS dispatched!';
+    }, 3200);
+
+    setTimeout(() => {
+      badge.classList.add('show');
+    }, 3800);
+  }
+
+  // Initialize
+  updateStepIndicator();
+  showPanel(0);
+</script>
+
+</body>
+</html>
